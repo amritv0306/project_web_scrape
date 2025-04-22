@@ -7,8 +7,8 @@ from typing import Dict, Any, Optional, List, Tuple
 from dataclasses import dataclass
 
 from src.scrapers.amazon_scraper import AmazonScraper
-# from src.scrapers.blinkit_scraper import BlinkatScraper
-# from src.scrapers.zepto_scraper import ZeptoScraper
+from src.scrapers.blinkit_scraper import BlinkatScraper
+from src.scrapers.zepto_scraper import ZeptoScraper
 from src.utils import load_data, save_data
 
 # Configure logging
