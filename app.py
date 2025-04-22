@@ -57,7 +57,7 @@ def main():
             analyzer = ProductAnalyzer(result_df)
             
             # Calculate price differences
-            analysis_df = analyzer.calculate_price_differences()
+            # analysis_df = analyzer.calculate_price_differences()
             
             # Platform availability
             st.write("### Product Availability Across Platforms")
@@ -111,7 +111,7 @@ def main():
             # Download links
             st.markdown("### Download Results")
             st.markdown(get_download_link(result_df, "product_matches.csv", "Download Matching Results (CSV)"), unsafe_allow_html=True)
-            st.markdown(get_download_link(analysis_df, "price_analysis.csv", "Download Price Analysis (CSV)"), unsafe_allow_html=True)
+            # st.markdown(get_download_link(analysis_df, "price_analysis.csv", "Download Price Analysis (CSV)"), unsafe_allow_html=True)
             
             status_text.text("Processing complete!")
             progress_bar.progress(100)

@@ -32,8 +32,8 @@ class ScraperResult:
 
 class ProductMatcher:
     # Constants
-    # PLATFORMS = ['amazon', 'blinkit', 'zepto']
-    PLATFORMS = ['amazon']
+    PLATFORMS = ['amazon', 'blinkit', 'zepto']
+    # PLATFORMS = ['amazon']
     FIELDS = ['url', 'mrp', 'sale_price', 'quantity', 'uom']
     MAX_WORKERS = 5
     MIN_DELAY = 2
