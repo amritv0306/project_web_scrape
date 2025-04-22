@@ -1,6 +1,12 @@
 from scrapers.base_scraper import BaseScraper
 import re
-from playwright.sync_api import sync_playwright
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
 import time
 
 class ZeptoScraper(BaseScraper):
@@ -9,50 +15,56 @@ class ZeptoScraper(BaseScraper):
         self.base_url = "https://www.zeptonow.com"
         self.search_url = f"{self.base_url}/search?q="
     
-    def _init_playwright(self):
-        """Initialize playwright and return browser and context"""
-        playwright = sync_playwright().start()
-        browser = playwright.chromium.launch(headless=True)
-        context = browser.new_context(
-            user_agent=self.headers['User-Agent'],
-            viewport={"width": 1280, "height": 720}
-        )
-        return playwright, browser, context
+    def _init_selenium(self):
+        """Initialize Selenium WebDriver and return driver"""
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument(f"user-agent={self.headers['User-Agent']}")
+        chrome_options.add_argument("--window-size=1280,720")
+        
+        driver = webdriver.Chrome(options=chrome_options)
+        return driver
     
     def search_product(self, product_name, uom):
         """Search for a product on Zepto and return the matching product URL"""
         search_query = f"{product_name} {uom}".replace(" ", "%20")
         search_url = f"{self.search_url}{search_query}"
         
-        playwright, browser, context = self._init_playwright()
+        driver = self._init_selenium()
         try:
-            page = context.new_page()
-            
             # Navigate to search page
-            page.goto(search_url)
+            driver.get(search_url)
             
             # Wait for search results to load
-            page.wait_for_selector(".search-item-card", timeout=10000)
+            wait = WebDriverWait(driver, 10)
+            wait.until(EC.presence_of_element_located((By.CLASS_NAME, "search-item-card")))
             
             # First, check if we need to set a delivery location
-            if "select your location" in page.content().lower():
+            if "select your location" in driver.page_source.lower():
                 # Handle location setting if needed
-                # This is a placeholder - actual implementation would depend on Zepto's UI
                 try:
                     # Click on location input
-                    page.click(".location-selector")
+                    location_selector = driver.find_element(By.CLASS_NAME, "location-selector")
+                    location_selector.click()
+                    
                     # Type a default location (e.g., Mumbai)
-                    page.fill(".location-input", "Mumbai")
+                    location_input = driver.find_element(By.CLASS_NAME, "location-input")
+                    location_input.send_keys("Mumbai")
+                    
                     # Select first suggestion
-                    page.click(".location-suggestion")
+                    location_suggestion = driver.find_element(By.CLASS_NAME, "location-suggestion")
+                    location_suggestion.click()
+                    
                     # Wait for page to reload with products
-                    page.wait_for_selector(".search-item-card", timeout=10000)
-                except:
+                    wait.until(EC.presence_of_element_located((By.CLASS_NAME, "search-item-card")))
+                except (TimeoutException, NoSuchElementException):
                     print("Could not set location on Zepto")
                     return None
             
             # Extract product cards
-            product_cards = page.query_selector_all(".search-item-card")
+            product_cards = driver.find_elements(By.CLASS_NAME, "search-item-card")
             
             if not product_cards:
                 return None
@@ -61,75 +73,73 @@ class ZeptoScraper(BaseScraper):
             for card in product_cards:
                 try:
                     # Get product name
-                    product_name_element = card.query_selector(".product-name")
-                    if not product_name_element:
-                        continue
-                    
-                    card_product_name = product_name_element.inner_text().strip()
+                    product_name_element = card.find_element(By.CLASS_NAME, "product-name")
+                    card_product_name = product_name_element.text.strip()
                     
                     # Check for reasonable match
                     search_terms = product_name.lower().split()
                     if any(term in card_product_name.lower() for term in search_terms[:3]):
                         # Get product URL
-                        link_element = card.query_selector("a")
-                        if link_element:
-                            href = link_element.get_attribute("href")
-                            if href:
-                                # Some links might be relative paths
-                                if href.startswith("/"):
-                                    return f"{self.base_url}{href}"
-                                else:
-                                    return href
-                except Exception as e:
+                        link_element = card.find_element(By.TAG_NAME, "a")
+                        href = link_element.get_attribute("href")
+                        if href:
+                            # Some links might be relative paths
+                            if href.startswith("/"):
+                                return f"{self.base_url}{href}"
+                            else:
+                                return href
+                except (NoSuchElementException, Exception) as e:
                     continue
             
             return None
         finally:
-            browser.close()
-            playwright.stop()
+            driver.quit()
     
     def extract_product_details(self, url):
         """Extract product details from Zepto product page"""
         if not url:
             return None
         
-        playwright, browser, context = self._init_playwright()
+        driver = self._init_selenium()
         try:
-            page = context.new_page()
-            page.goto(url)
+            driver.get(url)
             
             # Wait for product details to load
-            page.wait_for_selector(".product-detail-container", timeout=10000)
+            wait = WebDriverWait(driver, 10)
+            wait.until(EC.presence_of_element_located((By.CLASS_NAME, "product-detail-container")))
             
             # Extract MRP
             try:
-                mrp_element = page.query_selector(".strikethrough-price")
-                mrp = mrp_element.inner_text().strip() if mrp_element else "N/A"
+                mrp_element = driver.find_element(By.CLASS_NAME, "strikethrough-price")
+                mrp = mrp_element.text.strip()
                 mrp = re.sub(r'[^\d.]', '', mrp) if mrp != "N/A" else mrp
-            except:
+            except NoSuchElementException:
                 mrp = "N/A"
             
             # Extract Sale Price
             try:
-                price_element = page.query_selector(".actual-price")
-                sale_price = price_element.inner_text().strip() if price_element else "N/A"
+                price_element = driver.find_element(By.CLASS_NAME, "actual-price")
+                sale_price = price_element.text.strip()
                 sale_price = re.sub(r'[^\d.]', '', sale_price) if sale_price != "N/A" else sale_price
-            except:
+            except NoSuchElementException:
                 sale_price = "N/A"
             
             # Extract product title for quantity and UOM
             try:
-                title_element = page.query_selector(".product-title")
-                product_title = title_element.inner_text().strip() if title_element else ""
+                title_element = driver.find_element(By.CLASS_NAME, "product-title")
+                product_title = title_element.text.strip()
                 
                 # Try to find quantity/UOM from the product details section as well
-                details_element = page.query_selector(".product-weight")
-                product_details = details_element.inner_text().strip() if details_element else ""
+                try:
+                    details_element = driver.find_element(By.CLASS_NAME, "product-weight")
+                    product_details = details_element.text.strip()
+                except NoSuchElementException:
+                    product_details = ""
                 
                 # Combine title and details for better pattern matching
                 combined_text = f"{product_title} {product_details}"
                 quantity, uom = self._extract_quantity_uom(combined_text)
-            except:
+            except NoSuchElementException:
                 quantity, uom = "N/A", "N/A"
             
             return {
@@ -143,8 +153,7 @@ class ZeptoScraper(BaseScraper):
             print(f"Error extracting details from Zepto: {str(e)}")
             return None
         finally:
-            browser.close()
-            playwright.stop()
+            driver.quit()
     
     def _extract_quantity_uom(self, text):
         """Extract quantity and UOM from product text"""
@@ -166,4 +175,8 @@ class ZeptoScraper(BaseScraper):
         alt_pattern = r'(\d+(\.\d+)?)(ml|g|kg|l)'
         match = re.search(alt_pattern, text, re.IGNORECASE)
         if match:
-            quantity
+            quantity = match.group(1)
+            uom = match.group(3).lower()
+            return quantity, uom
+            
+        return "N/A", "N/A"

@@ -1,4 +1,4 @@
-from scrapers.base_scraper import BaseScraper
+from src.scrapers.base_scraper import BaseScraper
 import re
 
 class AmazonScraper(BaseScraper):
@@ -10,8 +10,12 @@ class AmazonScraper(BaseScraper):
     def search_product(self, product_name, uom):
         search_query = f"{product_name} {uom}".replace(" ", "+")
         search_url = f"{self.search_url}{search_query}"
-        
+        # print("------------------")
+        print(search_url)
         soup = self.get_soup(search_url)
+        # print("------------------")
+        print(soup.title)
+        # print("------------------")
         # Find the first product result
         product_link = soup.select_one("a.a-link-normal.s-no-outline")
         if product_link:

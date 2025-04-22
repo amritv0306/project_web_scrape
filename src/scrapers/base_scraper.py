@@ -2,6 +2,7 @@ import requests
 from abc import ABC, abstractmethod
 from bs4 import BeautifulSoup
 import random
+import time
 
 session = requests.Session()
 
@@ -38,4 +39,5 @@ class BaseScraper(ABC):
         """Get BeautifulSoup object from URL"""
         # response = session.get(url, headers=self.headers, proxies=proxy)
         response = session.get(url, headers=self.headers)
+        time.sleep(2)
         return BeautifulSoup(response.content, 'html.parser')

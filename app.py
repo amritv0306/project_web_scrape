@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import io
 import base64
-from src.main import ProductMatcher
+from src.MAIN2 import ProductMatcher
 from src.analyzer import ProductAnalyzer
 import matplotlib.pyplot as plt
 import seaborn as sns
