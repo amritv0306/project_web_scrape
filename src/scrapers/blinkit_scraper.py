@@ -1,4 +1,4 @@
-from scrapers.base_scraper import BaseScraper
+from src.scrapers.base_scraper import BaseScraper
 import re
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
