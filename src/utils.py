@@ -5,7 +5,7 @@ from urllib.parse import quote
 def load_data(file_path):
     """Load data from CSV file"""
     print("Processing first 100 rows")
-    return pd.read_csv(file_path, nrows=100) # file size limited to only top 100 rows
+    return pd.read_csv(file_path) # file size limited to only top 100 rows
     # return pd.read_csv(file_path)
 
 def save_data(data, file_path):
