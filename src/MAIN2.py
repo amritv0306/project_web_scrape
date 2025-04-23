@@ -6,10 +6,12 @@ import logging
 from typing import Dict, Any, Optional, List, Tuple
 from dataclasses import dataclass
 
-from src.scrapers.amazon_scraper import AmazonScraper
-from src.scrapers.blinkit_scraper import BlinkatScraper
-from src.scrapers.zepto_scraper import ZeptoScraper
-from src.utils import load_data, save_data
+from scrapers.amazon_scraper import AmazonScraper
+from scrapers.blinkit_scraper import BlinkatScraper
+# from scrapers.Blinkit import BlinkatScraper
+from scrapers.zepto_scraper import ZeptoScraper
+# from scrapers.Zepto import ZeptoScraper
+from utils import load_data, save_data
 
 # Configure logging
 logging.basicConfig(
@@ -35,7 +37,7 @@ class ProductMatcher:
     PLATFORMS = ['amazon', 'blinkit', 'zepto']
     # PLATFORMS = ['amazon']
     FIELDS = ['url', 'mrp', 'sale_price', 'quantity', 'uom']
-    MAX_WORKERS = 5
+    MAX_WORKERS = 10
     MIN_DELAY = 2
     MAX_DELAY = 5
     
@@ -89,7 +91,7 @@ class ProductMatcher:
         """Initialize result columns in the DataFrame."""
         for platform in self.PLATFORMS:
             for field in self.FIELDS:
-                df[f"{platform}_{field}"] = "-"
+                df[f"{platform}_{field}"] = ""
     
     def _process_skus_in_parallel(self, df: pd.DataFrame) -> List[Tuple[int, Dict[str, Any]]]:
         """Process SKUs in parallel using ThreadPoolExecutor."""
@@ -160,8 +162,8 @@ class ProductMatcher:
         
         # Process each platform in sequence
         self._search_on_amazon(product_name, uom, result)
-        # self._search_on_blinkit(product_name, uom, result)
-        # self._search_on_zepto(product_name, uom, result)
+        self._search_on_blinkit(product_name, uom, result)
+        self._search_on_zepto(product_name, uom, result)
         
         return result
     

@@ -54,7 +54,8 @@ class ProductAnalyzer:
         for platform in platforms:
             url_col = f"{platform}_url"
             if url_col in self.data.columns:
-                available = self.data[url_col].notna().sum()
+                # available = self.data[url_col].notna().sum()
+                available = self.data[url_col].astype(str).str.strip().ne('').sum()
                 availability[platform] = {
                     'available': available,
                     'not_available': len(self.data) - available,
@@ -87,7 +88,8 @@ class ProductAnalyzer:
     
     def plot_price_comparison(self, output_path='price_comparison.png'):
         """Generate price comparison chart"""
-        platforms = ['instamart', 'amazon', 'blinkit', 'zepto']
+        # platforms = ['instamart', 'amazon', 'blinkit', 'zepto']
+        platforms = ['amazon', 'blinkit', 'zepto']
         price_data = []
         
         for platform in platforms:

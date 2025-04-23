@@ -1,11 +1,11 @@
 import streamlit as st
 import pandas as pd
-import io
+# import io
 import base64
-from src.MAIN2 import ProductMatcher
-from src.analyzer import ProductAnalyzer
+from MAIN2 import ProductMatcher
+from analyzer import ProductAnalyzer
 import matplotlib.pyplot as plt
-import seaborn as sns
+# import seaborn as sns
 
 st.set_page_config(page_title="Product Matcher", layout="wide")
 
@@ -85,28 +85,28 @@ def main():
             st.pyplot(fig)
             
             # Best deals
-            st.write("### Best Deals (Largest Price Differences)")
-            best_deals = analyzer.find_best_deals()
-            st.dataframe(best_deals)
+            # st.write("### Best Deals (Largest Price Differences)")
+            # best_deals = analyzer.find_best_deals()
+            # st.dataframe(best_deals)
             
             # Price comparison
-            st.write("### Price Distribution Comparison")
-            price_chart = analyzer.plot_price_comparison()
-            st.image(price_chart)
+            # st.write("### Price Distribution Comparison")
+            # price_chart = analyzer.plot_price_comparison()
+            # st.image(price_chart)
             
             # Category analysis
             st.write("### Category Analysis")
-            category_analysis = analyzer.generate_category_analysis()
+            # category_analysis = analyzer.generate_category_analysis()
             
-            for category, data in category_analysis.items():
-                st.write(f"**{category}** (Products: {data['count']})")
+            # for category, data in category_analysis.items():
+            #     st.write(f"**{category}** (Products: {data['count']})")
                 
-                avg_diffs = data['avg_price_diff']
-                if avg_diffs:
-                    st.write("Average price differences:")
-                    for platform, diff in avg_diffs.items():
-                        if diff is not None:
-                            st.write(f"- {platform.capitalize()}: ₹{diff:.2f}")
+            #     avg_diffs = data['avg_price_diff']
+            #     if avg_diffs:
+            #         st.write("Average price differences:")
+            #         for platform, diff in avg_diffs.items():
+            #             if diff is not None:
+            #                 st.write(f"- {platform.capitalize()}: ₹{diff:.2f}")
             
             # Download links
             st.markdown("### Download Results")

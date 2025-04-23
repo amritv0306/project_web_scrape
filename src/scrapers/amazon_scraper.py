@@ -1,4 +1,4 @@
-from src.scrapers.base_scraper import BaseScraper
+from scrapers.base_scraper import BaseScraper
 import re
 
 class AmazonScraper(BaseScraper):
@@ -52,7 +52,7 @@ class AmazonScraper(BaseScraper):
     
     def _extract_quantity_uom(self, title):
         # Use regex patterns to extract quantity and UOM from title
-        quantity_pattern = r'(\d+(\.\d+)?)\s*(ml|g|kg|l|pcs)'
+        quantity_pattern = r'(\d+(\.\d+)?)\s*(ml|g|kg|l|pcs|Piece|UK|pack|box|meter|pair|inches|strips|inch|peices|large|medium|small|L|XL|XXL|S|XS|)'
         match = re.search(quantity_pattern, title, re.IGNORECASE)
         
         if match:

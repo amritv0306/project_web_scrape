@@ -1,8 +1,9 @@
-from src.scrapers.base_scraper import BaseScraper
+from scrapers.base_scraper import BaseScraper
 import re
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -17,15 +18,42 @@ class ZeptoScraper(BaseScraper):
     
     def _init_selenium(self):
         """Initialize Selenium WebDriver and return driver"""
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument(f"user-agent={self.headers['User-Agent']}")
-        chrome_options.add_argument("--window-size=1280,720")
-        
-        driver = webdriver.Chrome(options=chrome_options)
-        return driver
+        try:
+            # Set additional options to reduce memory usage
+            self.chrome_options = Options()
+            self.chrome_options.add_argument("--disable-extensions")
+            self.chrome_options.add_argument("--disable-gpu")
+            self.chrome_options.add_argument("--disable-dev-shm-usage")
+            self.chrome_options.add_argument("--no-sandbox")
+            self.chrome_options.add_argument("--disable-features=NetworkService")
+            self.chrome_options.add_argument("--window-size=1280,720")
+            self.chrome_options.add_argument("--disable-browser-side-navigation")
+            self.chrome_options.add_argument("--disable-infobars")
+            
+            # Limit the browser cache size
+            self.chrome_options.add_argument("--disk-cache-size=1")
+            self.chrome_options.add_argument("--media-cache-size=1")
+            
+            service = Service(ChromeDriverManager().install())
+            driver = webdriver.Chrome(service=service, options=self.chrome_options)
+            
+            # Set page load timeout
+            driver.set_page_load_timeout(30)
+            
+            return driver
+        except Exception as e:
+            print(f"Error initializing driver: {str(e)}")
+            # Try to create a new driver with minimal options as fallback
+            try:
+                minimal_options = Options()
+                minimal_options.add_argument("--headless")
+                minimal_options.add_argument("--no-sandbox")
+                service = Service(ChromeDriverManager().install())
+                driver = webdriver.Chrome(service=service, options=minimal_options)
+                return driver
+            except Exception as e2:
+                print(f"Fallback driver initialization also failed: {str(e2)}")
+                raise
     
     def search_product(self, product_name, uom):
         """Search for a product on Zepto and return the matching product URL"""
@@ -45,23 +73,84 @@ class ZeptoScraper(BaseScraper):
             if "select your location" in driver.page_source.lower():
                 # Handle location setting if needed
                 try:
-                    # Click on location input
-                    location_selector = driver.find_element(By.CLASS_NAME, "location-selector")
-                    location_selector.click()
-                    
-                    # Type a default location (e.g., Mumbai)
-                    location_input = driver.find_element(By.CLASS_NAME, "location-input")
-                    location_input.send_keys("Mumbai")
-                    
-                    # Select first suggestion
-                    location_suggestion = driver.find_element(By.CLASS_NAME, "location-suggestion")
-                    location_suggestion.click()
-                    
-                    # Wait for page to reload with products
-                    wait.until(EC.presence_of_element_located((By.CLASS_NAME, "search-item-card")))
-                except (TimeoutException, NoSuchElementException):
-                    print("Could not set location on Zepto")
+                    print("Attempting to set location on Zepto...")
+                    # Try multiple selector patterns for location elements
+                    location_selectors = [
+                        ".location-selector", 
+                        "[data-testid='location-selector']",
+                        ".address-selection",
+                        ".select-location"
+                    ]
+                    for selector in location_selectors:
+                        try:
+                            location_element = WebDriverWait(driver, 5).until(
+                                EC.element_to_be_clickable((By.CSS_SELECTOR, selector))
+                            )
+                            location_element.click()
+                            print("Location selector clicked")
+                            break
+                        except (TimeoutException, NoSuchElementException):
+                            continue
+                    # Input location
+                    input_selectors = [
+                        ".location-input",
+                        "[data-testid='location-input']",
+                        "input[placeholder*='location']",
+                        "input[placeholder*='address']"
+                    ]
+                    for selector in input_selectors:
+                        try:
+                            input_element = WebDriverWait(driver, 5).until(
+                                EC.element_to_be_clickable((By.CSS_SELECTOR, selector))
+                            )
+                            input_element.send_keys("Mumbai")
+                            print("Location input filled")
+                            break
+                        except (TimeoutException, NoSuchElementException):
+                            continue
+                     # Wait for and select first suggestion
+                    suggestion_selectors = [
+                        ".location-suggestion",
+                        ".address-suggestion",
+                        ".suggestion-item",
+                        "[data-testid='suggestion-item']"
+                    ]
+                    for selector in suggestion_selectors:
+                        try:
+                            suggestion = WebDriverWait(driver, 5).until(
+                                EC.element_to_be_clickable((By.CSS_SELECTOR, selector))
+                            )
+                            suggestion.click()
+                            print("Location suggestion selected")
+                            
+                            # Wait for page to reload with products
+                            WebDriverWait(driver, 10).until(
+                                EC.presence_of_element_located((By.CLASS_NAME, "search-item-card"))
+                            )
+                            break
+                        except (TimeoutException, NoSuchElementException):
+                            continue
+                except Exception as e:
+                    print(f"Could not set location on Zepto: {str(e)}")
                     return None
+
+                    # # Click on location input
+                    # location_selector = driver.find_element(By.CLASS_NAME, "location-selector")
+                    # location_selector.click()
+                    
+                    # # Type a default location (e.g., Mumbai)
+                    # location_input = driver.find_element(By.CLASS_NAME, "location-input")
+                    # location_input.send_keys("Mumbai")
+                    
+                    # # Select first suggestion
+                    # location_suggestion = driver.find_element(By.CLASS_NAME, "location-suggestion")
+                    # location_suggestion.click()
+                    
+                    # # Wait for page to reload with products
+                    # wait.until(EC.presence_of_element_located((By.CLASS_NAME, "search-item-card")))
+                # except (TimeoutException, NoSuchElementException):
+                #     print("Could not set location on Zepto")
+                #     return None
             
             # Extract product cards
             product_cards = driver.find_elements(By.CLASS_NAME, "search-item-card")
@@ -73,7 +162,8 @@ class ZeptoScraper(BaseScraper):
             for card in product_cards:
                 try:
                     # Get product name
-                    product_name_element = card.find_element(By.CLASS_NAME, "product-name")
+                    # product_name_element = card.find_element(By.CLASS_NAME, "product-name")
+                    product_name_element = WebDriverWait(card, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".Product__ProductName-sc-11dk8zk-3")))
                     card_product_name = product_name_element.text.strip()
                     
                     # Check for reasonable match
@@ -89,6 +179,7 @@ class ZeptoScraper(BaseScraper):
                             else:
                                 return href
                 except (NoSuchElementException, Exception) as e:
+                    print(f"Element not found: {str(e)}")
                     continue
             
             return None
